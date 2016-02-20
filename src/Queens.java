@@ -61,7 +61,7 @@ public class Queens {
     }
     
     public static final void main(String[] args) {
-        int[] solution = new Queens(8).solve();
+        int[] solution = new Queens(20).solve();
         if (!Queens.verify(solution))
             System.out.println("Solution not found");
         else

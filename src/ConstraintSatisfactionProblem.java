@@ -17,6 +17,7 @@ import javafx.util.Pair;
  *
  */
 public class ConstraintSatisfactionProblem {
+    public final int MAX_CAPACITY = 10000;
     private int nodesExplored;
     private int constraintsChecked;
 
@@ -27,8 +28,8 @@ public class ConstraintSatisfactionProblem {
     //    This maps to a set of acceptable values of these two variables.
     private Map<hashPair, Set<hashPair>> Constraints;
 
-    private List<Map<Integer, Set<Integer>>> removedLogs;
-    private List<Map<Integer, Integer>> addLogs;
+    private ArrayList<Map<Integer, Set<Integer>>> removedLogs;
+    private ArrayList<Map<Integer, Integer>> addLogs;
 
     public ConstraintSatisfactionProblem() {
       nodesExplored = 0;
@@ -38,9 +39,12 @@ public class ConstraintSatisfactionProblem {
       // #gross
       Constraints = new HashMap<hashPair, Set<hashPair>>();
 
-      removedLogs = new ArrayList<HashMap<Integer, Set<Integer>>>();
-      addLogs = new ArrayList<HashMap<Integer, Integer>>();
-
+      removedLogs = new ArrayList<Map<Integer, Set<Integer>>>();
+      addLogs = new ArrayList<Map<Integer, Integer>>();
+      removedLogs.ensureCapacity(MAX_CAPACITY);
+      addLogs.ensureCapacity(MAX_CAPACITY);
+      removedLogs.add(new HashMap<Integer, Set<Integer>>());
+      addLogs.add(new HashMap<Integer, Integer>());
     }
 
     /**
@@ -52,7 +56,7 @@ public class ConstraintSatisfactionProblem {
         long before = System.currentTimeMillis();
         if (!enforceConsistency())
             return null;
-        Map<Integer, Integer> solution = backtracking(new HashMap<>());
+        Map<Integer, Integer> solution = backtracking(new HashMap<>(), 0);
         double duration = (System.currentTimeMillis() - before) / 1000.0;
         printStats();
         System.out.println(String.format("Search time is %.2f second", duration));
@@ -123,12 +127,26 @@ public class ConstraintSatisfactionProblem {
      * @return a solution if found, null otherwise.
      */
     private Map<Integer, Integer> backtracking(Map<Integer, Integer> partialSolution, int depth) {
+      if (depth >= MAX_CAPACITY) {
+        System.err.println("Maximum recursion depth exceeded");
+        return null;
+      }
+
       /* Check if this level of depth has a rLog and aLog yet */
-        // If not, create one
-        // If so, load it up
+      Map<Integer, Set<Integer>> removed = removedLogs.get(depth);
+      Map<Integer, Integer> added = addLogs.get(depth);
 
-
-      Integer unassignedVar = selectUnassignedVariable(partialSolution);
+      /* Sanity Check: */
+/*  
+        for (int t = 0; t < depth; t++)
+          System.out.print("\t");
+        System.out.println("partialSolution At Start of Depth " + depth + ": " + partialSolution);
+        for (int t = 0; t < depth; t++)
+          System.out.print("\t");
+        System.out.println("Domains At Start of Depth " + depth + ": " + this.Variables);
+        System.out.println("\n");
+*/
+        Integer unassignedVar = selectUnassignedVariable(partialSolution);
       
       if (unassignedVar == -1)
         return partialSolution; // All variables have been adequately assigned
@@ -148,15 +166,27 @@ public class ConstraintSatisfactionProblem {
 
       // Loop through each potential value in the unassigned variable's domain
       for (i = 0; i < domainCount; i++) {
+/*
+        if (depth == 0)
+          System.out.println("Domains: " + this.Variables);
+*/ 
         Integer x = domainArray[i];
 
+        /* SANITY CHECK */
+/*
+        for (int t = 0; t < depth; t++)
+          System.out.print("\t");
+        System.out.println("Trying (" + unassignedVar + " => " + x + ")");
+*/
         // Make the assigment
         partialSolution.put(unassignedVar, x);
-        /* Add this entry to the aLog */
-
+        added.put(unassignedVar, x); /* Add this entry to the aLog */
+ 
 
         // Do the inference (and ensure this won't cause directly awful issues)
-        if (inference(unassignedVar, x, partialSolution, depth)) { // Changes partialSolution by reference
+        if (inference(unassignedVar, x, partialSolution, removed, added)) { // Changes partialSolution by reference
+          removedLogs.add(new HashMap<Integer, Set<Integer>>());
+          addLogs.add(new HashMap<Integer, Integer>());
           result = backtracking(partialSolution, depth + 1); // Recurse on the updated solution
 
           // Check for success
@@ -166,15 +196,75 @@ public class ConstraintSatisfactionProblem {
           }
         }
 
-        // Undo the changes we just did (but remove x from the domain of unassignedVar)
-        this.Variables.get(unassignedVar).remove(x);
-        /* Remove this entry from the the aLog */
-        /* Remove inference's changes in the rLog and aLog */
+        /* SANITY CHECK */
+/*
+        for (int t = 0; t < depth; t++)
+          System.out.print("\t");
+        System.out.println("Restoring previous state!");
+        for (int t = 0; t < depth; t++)
+          System.out.print("\t");
+        System.out.println("partialSolution Before: " + partialSolution);
+        for (int t = 0; t < depth; t++)
+          System.out.print("\t");
+        System.out.println("Domains Before: " + this.Variables);
+        for (int t = 0; t < depth; t++)
+          System.out.print("\t");
+        System.out.println("Removed Map: " + removed);
+        for (int t = 0; t < depth; t++)
+          System.out.print("\t");
+        System.out.println("Added Map: " + added);
+*/
+        // Undo all of the changes we just did so we can try again at this depth
+        /* Remove entries based on the aLog */
+        Set<Integer> addedSet = new HashSet<Integer>(added.keySet());
 
+        // Loop through each variable added to the partial solution
+        for (Integer r : addedSet) {
+          partialSolution.remove(r); // Remove it from the partial solution
+          //added.remove(r); // Clear that entry in the aLog
+        }
+
+        /* Remove inference's changes based on the rLog */
+        Set<Integer> removedSet = new HashSet<Integer>(removed.keySet());
+        // Loop through all variable's whose domains were modified
+        for (Integer r : removedSet) {
+          Set<Integer> fromDomainX = removed.get(r);
+          // Loop through each value removed from X's domain
+          for (Integer gone : fromDomainX) {
+            this.Variables.get(r).add(gone); // Add it back
+          }
+          removed.remove(r); // Get rid of the whole entry in the rLog
+        }
+/*
+        for (int t = 0; t < depth; t++)
+          System.out.print("\t");
+        System.out.println("partialSolution After: " + partialSolution);
+        for (int t = 0; t < depth; t++)
+          System.out.print("\t");
+        System.out.println("Domains After: " + this.Variables);
+        System.out.println("\n");
+*/
+        removed = new HashMap<Integer, Set<Integer>>();
+        added = new HashMap<Integer, Integer>();
+//        this.Variables.get(unassignedVar).remove(x);
         /* Keep the removal of the value we just tried from this var's domain? */
       }
 
-      /* Undo all the changes from this depth level to jump back before returning! */
+      // All the changes from this depth level have been undone
+      if (depth >= 1) {
+        removedLogs.remove(removedLogs.size() - 1);
+        addLogs.remove(removedLogs.size() - 1);
+      } 
+
+/* 
+        for (int t = 0; t < depth; t++)
+          System.out.print("\t");
+        System.out.println("partialSolution At End of Depth " + depth + ": " + partialSolution);
+        for (int t = 0; t < depth; t++)
+          System.out.print("\t");
+        System.out.println("Domains At End of Depth " + depth + ": " + this.Variables);
+        System.out.println("\n"); 
+*/
       return null;
     }
     
@@ -187,7 +277,11 @@ public class ConstraintSatisfactionProblem {
      * @param removed          the values removed from other variables' domains
      * @return true if the partial solution may lead to a solution, false otherwise.
      */
-    private boolean inference(Integer var, Integer value, Map<Integer, Integer> partialSolution, int depth) {
+    private boolean inference(Integer var, Integer value, 
+                                Map<Integer, Integer> partialSolution, 
+                                Map<Integer, Set<Integer>> removed, 
+                                Map<Integer, Integer> added) {
+
       Iterator<hashPair> constraintIter = Constraints.keySet().iterator();
       Set<hashPair> relation; 
       Integer tempVar;
@@ -198,8 +292,15 @@ public class ConstraintSatisfactionProblem {
 
       // Loop through and remove the new assignment from each domain
       for (Integer x : Variables.keySet()) {
-        if (Variables.get(x).remove(value) ) {
-          /* mark this as removed in the rLogs */ 
+        if (Variables.get(x).contains(value) ) {
+          /* mark this as removed in the rLogs */
+          Variables.get(x).remove(value);
+          if (removed.containsKey(x)) {
+            removed.get(x).add(value);
+          } else {
+            removed.put(x, new HashSet<Integer>());
+            removed.get(x).add(value);
+          }
         }
       }
 
@@ -227,6 +328,12 @@ public class ConstraintSatisfactionProblem {
               // remove this value from the domain
               if (!relation.contains(tempConstraint) ) {
                 domainIter.remove();
+                if (removed.containsKey(tempVar)) {
+                  removed.get(tempVar).add(potentialVal);
+                } else {
+                  removed.put(tempVar, new HashSet<Integer>());
+                  removed.get(tempVar).add(potentialVal);
+                }
                 /* Mark this as removed in the rLog */
               }
 
@@ -247,9 +354,15 @@ public class ConstraintSatisfactionProblem {
               potentialVal = domainIter.next();
               tempConstraint = new hashPair(potentialVal, value);
 
-              if (!relation.contains(tempConstraint) ) {
+              if (!relation.contains(tempConstraint)) {
                 domainIter.remove();
                 /* Mark this as removed in the rLog */
+                if (removed.containsKey(tempVar)) {
+                  removed.get(tempVar).add(potentialVal);
+                } else {
+                  removed.put(tempVar, new HashSet<Integer>());
+                  removed.get(tempVar).add(potentialVal);
+                }
               }
             }
           }
@@ -273,11 +386,11 @@ public class ConstraintSatisfactionProblem {
             domainIter = tempDomain.iterator();
             Integer newVal = domainIter.next();
             partialSolution.put(V, newVal);
-            /* Mark this new solution part in aLogs */
+            added.put(V, newVal);
 
             // If this fails in inference, the outer solution is bad too
             // run it at the same depth to keep track of changes
-            if (! inference(V, newVal, partialSolution, depth)) {
+            if (! inference(V, newVal, partialSolution, removed, added)) {
               return false;
             }
           }

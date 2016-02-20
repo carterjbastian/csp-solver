@@ -6,3 +6,7 @@ queens:
 
 clean:
 	rm ./csp_solver/*.class
+
+run:
+	javac -d . $(SRCS) Queens.java
+	java csp_solver.Queens
