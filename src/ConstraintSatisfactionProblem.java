@@ -24,7 +24,7 @@ public class ConstraintSatisfactionProblem {
     // Let's be real: This is one nasty-looking data structure.
     //    Breakdown: We got a Pair of Variables
     //    This maps to a set of acceptable values of these two variables.
-    private Map<Pair<Integer, Integer>, Set<Pair<Integer, Integer>>> Constraints;
+    private Map<hashPair, Set<hashPair>> Constraints;
 
     public ConstraintSatisfactionProblem() {
       nodesExplored = 0;
@@ -32,7 +32,7 @@ public class ConstraintSatisfactionProblem {
 
       Variables = new HashMap<Integer, Set<Integer>>();
       // #gross
-      Constraints = new HashMap<Pair<Integer, Integer>, Set<Pair<Integer, Integer>>>();
+      Constraints = new HashMap<hashPair, Set<hashPair>>();
     }
 
     /**
@@ -93,8 +93,8 @@ public class ConstraintSatisfactionProblem {
      * @param id2         the identifier of the second variable
      * @param constraint  the constraint
      */
-    public void addConstraint(Integer id1, Integer id2, Set<Pair<Integer, Integer>> constraint) {
-      Pair<Integer, Integer> scope = new Pair<Integer, Integer>(id1, id2);
+    public void addConstraint(Integer id1, Integer id2, Set<hashPair> constraint) {
+      hashPair scope = new hashPair(id1, id2);
       this.Constraints.put(scope, constraint);
     }
     
@@ -167,12 +167,12 @@ public class ConstraintSatisfactionProblem {
      * @return true if the partial solution may lead to a solution, false otherwise.
      */
     private boolean inference(Integer var, Integer value, Map<Integer, Integer> partialSolution) {
-      Iterator<Pair<Integer, Integer>> constraintIter = Constraints.keySet().iterator();
-      Set<Pair<Integer, Integer>> relation; 
+      Iterator<hashPair> constraintIter = Constraints.keySet().iterator();
+      Set<hashPair> relation; 
       Integer tempVar;
       Iterator<Integer> domainIter;
       Integer potentialVal;
-      Pair<Integer, Integer> tempConstraint;
+      hashPair tempConstraint;
       Set<Integer> tempDomain;
       HashMap<Integer, ArrayList<Integer>> removed = new HashMap<Integer, ArrayList<Integer>>();
 
@@ -184,12 +184,12 @@ public class ConstraintSatisfactionProblem {
       }
 
       // Loop through each constraint in the CSP
-      for (Pair<Integer, Integer> scope : Constraints.keySet()) {
+      for (hashPair scope : Constraints.keySet()) {
         
         // Check if this constraint involves the newly assigned value
-        if (scope.getKey() == var) {
+        if (scope.getX() == var) {
           // this var is the first item in the pair
-          tempVar = scope.getValue();
+          tempVar = scope.getY();
           
           if (! partialSolution.containsKey(tempVar)) {
             // Get the possible set of acceptable constrained pairs
@@ -201,7 +201,7 @@ public class ConstraintSatisfactionProblem {
           
             while (domainIter.hasNext()) {
               potentialVal = domainIter.next();
-              tempConstraint = new Pair<Integer, Integer>(value, potentialVal);
+              tempConstraint = new hashPair(value, potentialVal);
             
               // If this constraint is not in the acceptable set of constraints,
               // remove this value from the domain
@@ -210,11 +210,10 @@ public class ConstraintSatisfactionProblem {
               }
 
               }
-              removed.put(tempVar, rList);
           }
-        } else if (scope.getValue() == var) {
+        } else if (scope.getY() == var) {
           // This var is the second item in the pair
-          tempVar = scope.getKey();
+          tempVar = scope.getX();
 
           if (! partialSolution.containsKey(tempVar)) {
             // Get the possible set of acceptable constrained pairs
@@ -225,7 +224,7 @@ public class ConstraintSatisfactionProblem {
 
             while (domainIter.hasNext()) {
               potentialVal = domainIter.next();
-              tempConstraint = new Pair<Integer, Integer>(potentialVal, value);
+              tempConstraint = new hashPair(potentialVal, value);
 
               if (!relation.contains(tempConstraint) ) {
                 domainIter.remove();

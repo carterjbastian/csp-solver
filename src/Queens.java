@@ -22,12 +22,12 @@ public class Queens {
         // Create constraints
         for (int i = 1; i <= numberOfQueens - 1; ++i) {
             for (int j = i + 1; j <= numberOfQueens; ++j) {
-                Set<Pair<Integer, Integer>> constraint = new HashSet<>();
+                Set<hashPair> constraint = new HashSet<>();
                 for (int a = 1; a <= numberOfQueens; ++a) {
                     for (int b = 1; b <= numberOfQueens; ++b) {
                         if (a == b || Math.abs(a - b) == Math.abs(i - j))
                             continue;
-                        constraint.add(new Pair<>(a, b));
+                        constraint.add(new hashPair(a, b));
                     }
                 }
                 solver.addConstraint(i, j, constraint);
