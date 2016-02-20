@@ -67,12 +67,12 @@ public class Sudoku {
     
     @SuppressWarnings({ "restriction", "boxing" })
     public void generateConstraint(int[] pieces) {
-        Set<Pair<Integer, Integer>> constraint = new HashSet<>();
+        Set<hashPair> constraint = new HashSet<>();
         for (int i = 1; i <= boardSize; ++i) {
             for (int j = 1; j <= boardSize; ++j) {
                 if (i == j)
                     continue;
-                constraint.add(new Pair<>(i, j));
+                constraint.add(new hashPair(i, j));
             }
         }
         for (int i = 0; i < pieces.length; ++i) {

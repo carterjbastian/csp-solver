@@ -17,7 +17,7 @@ import javafx.util.Pair;
  *
  */
 public class ConstraintSatisfactionProblem {
-    public final int MAX_CAPACITY = 10000;
+    public final int MAX_CAPACITY = 1000000;
     private int nodesExplored;
     private int constraintsChecked;
 
@@ -181,7 +181,7 @@ public class ConstraintSatisfactionProblem {
         // Make the assigment
         partialSolution.put(unassignedVar, x);
         added.put(unassignedVar, x); /* Add this entry to the aLog */
- 
+        incrementNodeCount();
 
         // Do the inference (and ensure this won't cause directly awful issues)
         if (inference(unassignedVar, x, partialSolution, removed, added)) { // Changes partialSolution by reference
@@ -290,6 +290,8 @@ public class ConstraintSatisfactionProblem {
       hashPair tempConstraint;
       Set<Integer> tempDomain;
 
+
+      
       // Loop through and remove the new assignment from each domain
       for (Integer x : Variables.keySet()) {
         if (Variables.get(x).contains(value) ) {
@@ -304,9 +306,22 @@ public class ConstraintSatisfactionProblem {
         }
       }
 
+      for (Integer x : this.Variables.get(var)) {
+        if (x != value) {
+          if (removed.containsKey(var)) {
+             removed.get(var).add(x);
+          } else {
+            removed.put(var, new HashSet<Integer>());
+            removed.get(var).add(x);
+          }
+        }
+      }
+      this.Variables.put(var, new HashSet<Integer>());
+      this.Variables.get(var).add(value);
+
       // Loop through each constraint in the CSP
       for (hashPair scope : Constraints.keySet()) {
-        
+        incrementConstraintCheck();
         // Check if this constraint involves the newly assigned value
         if (scope.getX() == var) {
           // this var is the first item in the pair
@@ -385,8 +400,11 @@ public class ConstraintSatisfactionProblem {
             // If so, update the possible solution and recurse
             domainIter = tempDomain.iterator();
             Integer newVal = domainIter.next();
+            
             partialSolution.put(V, newVal);
             added.put(V, newVal);
+            incrementNodeCount();
+            
 
             // If this fails in inference, the outer solution is bad too
             // run it at the same depth to keep track of changes
