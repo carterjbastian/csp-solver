@@ -10,7 +10,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.Iterator;
 import javafx.util.Pair;
-
+import java.util.LinkedList;
 
 /**
  * Simple CSP solver
@@ -20,6 +20,9 @@ public class ConstraintSatisfactionProblem {
     public final int MAX_CAPACITY = 1000000;
     private int nodesExplored;
     private int constraintsChecked;
+
+    private boolean MRV;
+    private boolean LCV;
 
     private Map<Integer, Set<Integer>> Variables;
     
@@ -35,6 +38,8 @@ public class ConstraintSatisfactionProblem {
       nodesExplored = 0;
       constraintsChecked = 0;
 
+      this.MRV = true;
+      this.LCV = false;
       Variables = new HashMap<Integer, Set<Integer>>();
       // #gross
       Constraints = new HashMap<hashPair, Set<hashPair>>();
@@ -151,7 +156,7 @@ public class ConstraintSatisfactionProblem {
       if (unassignedVar == -1)
         return partialSolution; // All variables have been adequately assigned
 
-      Set<Integer> domainVals = orderDomainValues(unassignedVar, partialSolution);
+      List<Integer> domainVals = orderDomainValues(unassignedVar, partialSolution);
 
       Integer[] domainArray = new Integer[domainVals.size()];
       int i = 0;
@@ -424,11 +429,15 @@ public class ConstraintSatisfactionProblem {
      * @param partialSolution  the partial solution
      * @return an order of values in var's domain
      */
-    private Set<Integer> orderDomainValues(Integer var, Map<Integer, Integer> partialSolution) {
-      Set<Integer> vals = Variables.get(var);
-      // We want to loop through this and change the values in the Variables object
-      Set<Integer> copy = new HashSet<Integer>(vals); 
-      return vals;
+    private List<Integer> orderDomainValues(Integer var, Map<Integer, Integer> partialSolution) {
+        Set<Integer> vals = Variables.get(var);
+        // We want to loop through this and change the values in the Variables object
+        Set<Integer> copy = new HashSet<Integer>(vals);
+        List<Integer> res = new LinkedList<Integer>();
+        for (Integer x : copy) {
+          res.add(x);
+        }
+        return res;
     }
 
     /**
@@ -439,13 +448,41 @@ public class ConstraintSatisfactionProblem {
      * @return one unassigned variable
      */
     private Integer selectUnassignedVariable(Map<Integer, Integer> partialSolution) {
-      // Iterate through all the variables in the problem
-      for (Integer x : Variables.keySet()) {
-        // If it hasn't been assigned to yet, that's our variable!
-        if (partialSolution.get(x) == null)
-          return x;
+      /* MRV */
+      if (this.MRV) {
+        Map<Integer, Integer> constraintAmount = new HashMap<Integer, Integer>();
+
+        // Iterate through each potential variable in the problem
+        for (Integer x : Variables.keySet()) {
+          // If it hasn't been assigned to yet, let's track it
+          if (partialSolution.get(x) == null) {
+            constraintAmount.put(x, Variables.get(x).size());
+          }
+        }
+
+        // Loop through to find the value with the highest number of constraining
+        // values
+        int maxVal = -1;
+        Integer maxInt = new Integer(-1);
+
+        for (Integer x : constraintAmount.keySet()) {
+          if (constraintAmount.get(x) > maxVal) {
+            maxVal = constraintAmount.get(x);
+            maxInt = x;
+          }
+        }
+
+        return maxInt;
+
+      } else {
+        // Iterate through all the variables in the problem
+        for (Integer x : Variables.keySet()) {
+          // If it hasn't been assigned to yet, that's our variable!
+          if (partialSolution.get(x) == null)
+            return x;
+        }
+        return -1;
       }
-      return -1;
     }
     
     /**
