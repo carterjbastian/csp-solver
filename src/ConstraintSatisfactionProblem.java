@@ -2,6 +2,7 @@ package csp_solver;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -26,6 +27,9 @@ public class ConstraintSatisfactionProblem {
     //    This maps to a set of acceptable values of these two variables.
     private Map<hashPair, Set<hashPair>> Constraints;
 
+    private List<Map<Integer, Set<Integer>>> removedLogs;
+    private List<Map<Integer, Integer>> addLogs;
+
     public ConstraintSatisfactionProblem() {
       nodesExplored = 0;
       constraintsChecked = 0;
@@ -33,6 +37,10 @@ public class ConstraintSatisfactionProblem {
       Variables = new HashMap<Integer, Set<Integer>>();
       // #gross
       Constraints = new HashMap<hashPair, Set<hashPair>>();
+
+      removedLogs = new ArrayList<HashMap<Integer, Set<Integer>>>();
+      addLogs = new ArrayList<HashMap<Integer, Integer>>();
+
     }
 
     /**
@@ -114,9 +122,14 @@ public class ConstraintSatisfactionProblem {
      * @param partialSolution  a partial solution
      * @return a solution if found, null otherwise.
      */
-    private Map<Integer, Integer> backtracking(Map<Integer, Integer> partialSolution) {
+    private Map<Integer, Integer> backtracking(Map<Integer, Integer> partialSolution, int depth) {
+      /* Check if this level of depth has a rLog and aLog yet */
+        // If not, create one
+        // If so, load it up
+
 
       Integer unassignedVar = selectUnassignedVariable(partialSolution);
+      
       if (unassignedVar == -1)
         return partialSolution; // All variables have been adequately assigned
 
@@ -139,21 +152,29 @@ public class ConstraintSatisfactionProblem {
 
         // Make the assigment
         partialSolution.put(unassignedVar, x);
+        /* Add this entry to the aLog */
+
 
         // Do the inference (and ensure this won't cause directly awful issues)
-        if (inference(unassignedVar, x, partialSolution)) { // Changes partialSolution by reference
-          result = backtracking(partialSolution); // Recurse on the updated solution
+        if (inference(unassignedVar, x, partialSolution, depth)) { // Changes partialSolution by reference
+          result = backtracking(partialSolution, depth + 1); // Recurse on the updated solution
 
           // Check for success
           if (result != null) {
+            /* We've succeeded! Don't undo anything */
             return result;
           }
         }
 
         // Undo the changes we just did (but remove x from the domain of unassignedVar)
         this.Variables.get(unassignedVar).remove(x);
+        /* Remove this entry from the the aLog */
+        /* Remove inference's changes in the rLog and aLog */
+
+        /* Keep the removal of the value we just tried from this var's domain? */
       }
 
+      /* Undo all the changes from this depth level to jump back before returning! */
       return null;
     }
     
@@ -166,7 +187,7 @@ public class ConstraintSatisfactionProblem {
      * @param removed          the values removed from other variables' domains
      * @return true if the partial solution may lead to a solution, false otherwise.
      */
-    private boolean inference(Integer var, Integer value, Map<Integer, Integer> partialSolution) {
+    private boolean inference(Integer var, Integer value, Map<Integer, Integer> partialSolution, int depth) {
       Iterator<hashPair> constraintIter = Constraints.keySet().iterator();
       Set<hashPair> relation; 
       Integer tempVar;
@@ -174,12 +195,11 @@ public class ConstraintSatisfactionProblem {
       Integer potentialVal;
       hashPair tempConstraint;
       Set<Integer> tempDomain;
-      HashMap<Integer, ArrayList<Integer>> removed = new HashMap<Integer, ArrayList<Integer>>();
 
       // Loop through and remove the new assignment from each domain
       for (Integer x : Variables.keySet()) {
         if (Variables.get(x).remove(value) ) {
-          removed.put(x, new ArrayList<Integer>(value));
+          /* mark this as removed in the rLogs */ 
         }
       }
 
@@ -207,9 +227,10 @@ public class ConstraintSatisfactionProblem {
               // remove this value from the domain
               if (!relation.contains(tempConstraint) ) {
                 domainIter.remove();
+                /* Mark this as removed in the rLog */
               }
 
-              }
+            }
           }
         } else if (scope.getY() == var) {
           // This var is the second item in the pair
@@ -228,6 +249,7 @@ public class ConstraintSatisfactionProblem {
 
               if (!relation.contains(tempConstraint) ) {
                 domainIter.remove();
+                /* Mark this as removed in the rLog */
               }
             }
           }
@@ -251,9 +273,11 @@ public class ConstraintSatisfactionProblem {
             domainIter = tempDomain.iterator();
             Integer newVal = domainIter.next();
             partialSolution.put(V, newVal);
+            /* Mark this new solution part in aLogs */
 
             // If this fails in inference, the outer solution is bad too
-            if (! inference(V, newVal, partialSolution)) {
+            // run it at the same depth to keep track of changes
+            if (! inference(V, newVal, partialSolution, depth)) {
               return false;
             }
           }
