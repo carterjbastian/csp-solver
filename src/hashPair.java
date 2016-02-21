@@ -32,4 +32,9 @@ import javafx.util.Pair;
 
         return (getX() == ((hashPair)o).getX() && getY() == ((hashPair)o).getY());
       }
+      
+      @Override
+      public String toString() {
+        return "(" + getX() + ", " + getY() + ")";
+      }
     }

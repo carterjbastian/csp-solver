@@ -26,12 +26,12 @@ public class ConstraintSatisfactionProblem {
     private boolean AC3;
     private boolean MAC3;
 
-    private Map<Integer, Set<Integer>> Variables;
+    protected Map<Integer, Set<Integer>> Variables;
     
     // Let's be real: This is one nasty-looking data structure.
     //    Breakdown: We got a Pair of Variables
     //    This maps to a set of acceptable values of these two variables.
-    private Map<hashPair, Set<hashPair>> Constraints;
+    protected Map<hashPair, Set<hashPair>> Constraints;
 
     private ArrayList<Map<Integer, Set<Integer>>> removedLogs;
     private ArrayList<Map<Integer, Integer>> addLogs;
@@ -41,10 +41,10 @@ public class ConstraintSatisfactionProblem {
       constraintsChecked = 0;
 
       /* USE THIS SECTION TO MODIFY ACTIVE FEATURES */
-      this.MRV = true;
-      this.LCV = true;
-      this.AC3 = true;
-      this.MAC3 = true;
+      this.MRV = false;
+      this.LCV = false;
+      this.AC3 = false;
+      this.MAC3 = false;
 
       Variables = new HashMap<Integer, Set<Integer>>();
       Constraints = new HashMap<hashPair, Set<hashPair>>();
