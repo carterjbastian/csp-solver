@@ -23,6 +23,8 @@ public class ConstraintSatisfactionProblem {
 
     private boolean MRV;
     private boolean LCV;
+    private boolean AC3;
+    private boolean MAC3;
 
     private Map<Integer, Set<Integer>> Variables;
     
@@ -38,10 +40,13 @@ public class ConstraintSatisfactionProblem {
       nodesExplored = 0;
       constraintsChecked = 0;
 
+      /* USE THIS SECTION TO MODIFY ACTIVE FEATURES */
       this.MRV = true;
-      this.LCV = false;
+      this.LCV = true;
+      this.AC3 = true;
+      this.MAC3 = true;
+
       Variables = new HashMap<Integer, Set<Integer>>();
-      // #gross
       Constraints = new HashMap<hashPair, Set<hashPair>>();
 
       removedLogs = new ArrayList<Map<Integer, Set<Integer>>>();
@@ -59,7 +64,7 @@ public class ConstraintSatisfactionProblem {
     public Map<Integer, Integer> solve() {
         resetStats();
         long before = System.currentTimeMillis();
-        if (!enforceConsistency())
+        if (!enforceConsistency(new HashMap<Integer, Set<Integer>>()))
             return null;
         Map<Integer, Integer> solution = backtracking(new HashMap<>(), 0);
         double duration = (System.currentTimeMillis() - before) / 1000.0;
@@ -118,14 +123,110 @@ public class ConstraintSatisfactionProblem {
     /**
      * Enforce consistency by AC-3, PC-3.
      */
-    private boolean enforceConsistency() {
+    private boolean enforceConsistency(Map<Integer, Set<Integer>> removed) {
+      if (this.AC3) {
+        /* AC-3 Implementation */
+        Queue<hashPair> arcQ = new LinkedList<hashPair>();
+        
+        // Make the arc Queue
+        for (hashPair arc : Constraints.keySet()) 
+          arcQ.add(arc);
+        
+        // Arc Queue contains all of the initial arcs (constraint pairs)
+        
+        // Loop while the queue is not empty
+        while (! arcQ.isEmpty()) {
+          hashPair arc = arcQ.remove();
+
+          if (revise(arc, removed)) {
+            if (this.Variables.get(arc.getX()).size() == 0)
+              return false;
+            for (hashPair modded : Constraints.keySet()) {
+              if ((modded.getX() == arc.getX() && modded.getY() != arc.getY()) ||
+                  (modded.getY() == arc.getX()))
+                arcQ.add(modded);
+            }
+          }
+
+          if (reviseBackward(arc, removed)) {
+            if (this.Variables.get(arc.getY()).size() == 0)
+              return false;
+            for (hashPair modded : Constraints.keySet()) {
+              if ((modded.getY() == arc.getY() && modded.getX() != arc.getX()) ||
+                  (modded.getX() == arc.getY()))
+                arcQ.add(modded);
+            }
+          }
+
+        }
+
         return true;
+      } else {
+        return true;
+      }
     }
     
-    private boolean revise(Integer id1, Integer id2) {
-        return false;
+    private boolean revise(hashPair arc, Map<Integer, Set<Integer>> removed) {
+        Integer id1 = arc.getX(), id2 = arc.getY();
+        boolean revised = false;
+        Iterator<Integer> domainIt = this.Variables.get(id1).iterator();
+
+        // Loop through each value in the domain of X_i
+        while (domainIt.hasNext()) {
+//        for (Integer x : this.Variables.get(id1)) {
+          Integer x = domainIt.next();
+          boolean useless = true;
+          for (Integer y : this.Variables.get(id2)) {
+            hashPair attempt = new hashPair(x, y);
+            if (Constraints.get(arc).contains(attempt))
+                useless = false;
+          }
+
+          if (useless) {
+//            System.out.println("Removing a Var in revise forward");
+            if (removed.containsKey(id1)) {
+              removed.get(id1).add(x);
+            } else {
+              removed.put(id1, new HashSet<Integer>());
+              removed.get(id1).add(x);
+            }
+            domainIt.remove();
+            revised = true;
+          }
+        }
+        return revised;
     }
 
+    private boolean reviseBackward(hashPair arc, Map<Integer, Set<Integer>>removed) {
+        Integer id1 = arc.getX(), id2 = arc.getY();
+        boolean revised = false;
+        Iterator<Integer> domainIt = this.Variables.get(id2).iterator();
+
+        // Loop through each value in the domain of X_j
+        while (domainIt.hasNext()) {
+          Integer y = domainIt.next();
+          boolean useless = true;
+
+          for (Integer x : this.Variables.get(id1)) {
+            hashPair attempt = new hashPair(x, y);
+            if (Constraints.get(arc).contains(attempt))
+                useless = false;
+          }
+
+          if (useless) {
+//            System.out.println("Removing a Var in revise backward");
+            if (removed.containsKey(id2)) {
+              removed.get(id2).add(y);
+            } else {
+              removed.put(id2, new HashSet<Integer>());
+              removed.get(id2).add(y);
+            }
+            domainIt.remove();
+            revised = true;
+          }
+        }
+        return revised;
+    }
     /**
      * Backtracking algorithm
      * @param partialSolution  a partial solution
@@ -240,6 +341,8 @@ public class ConstraintSatisfactionProblem {
           }
           removed.remove(r); // Get rid of the whole entry in the rLog
         }
+
+        /* SANITY CHECK */
 /*
         for (int t = 0; t < depth; t++)
           System.out.print("\t");
@@ -261,6 +364,7 @@ public class ConstraintSatisfactionProblem {
         addLogs.remove(removedLogs.size() - 1);
       } 
 
+      /* SANITY CHECK */
 /* 
         for (int t = 0; t < depth; t++)
           System.out.print("\t");
@@ -295,22 +399,6 @@ public class ConstraintSatisfactionProblem {
       hashPair tempConstraint;
       Set<Integer> tempDomain;
 
-
-      
-      // Loop through and remove the new assignment from each domain
-      for (Integer x : Variables.keySet()) {
-        if (Variables.get(x).contains(value) ) {
-          /* mark this as removed in the rLogs */
-          Variables.get(x).remove(value);
-          if (removed.containsKey(x)) {
-            removed.get(x).add(value);
-          } else {
-            removed.put(x, new HashSet<Integer>());
-            removed.get(x).add(value);
-          }
-        }
-      }
-
       for (Integer x : this.Variables.get(var)) {
         if (x != value) {
           if (removed.containsKey(var)) {
@@ -321,6 +409,7 @@ public class ConstraintSatisfactionProblem {
           }
         }
       }
+
       this.Variables.put(var, new HashSet<Integer>());
       this.Variables.get(var).add(value);
 
@@ -388,7 +477,8 @@ public class ConstraintSatisfactionProblem {
           }
         } 
       }
-
+      if (this.MAC3)  
+        enforceConsistency(removed);
 
       /* Loop through each remaining unassigned variable */
       for (Integer V : Variables.keySet()) {
@@ -430,14 +520,57 @@ public class ConstraintSatisfactionProblem {
      * @return an order of values in var's domain
      */
     private List<Integer> orderDomainValues(Integer var, Map<Integer, Integer> partialSolution) {
+      if (this.LCV) {
+        Set<Integer> vals = Variables.get(var);
+        List<Integer> result = new LinkedList<Integer>();
+        Map<Integer, Integer> constraintAmount = new HashMap<Integer, Integer>();
+
+        // Loop through each value in the variable's domain
+        for (Integer v : vals) {
+          int constraintCount = 0;
+            
+          // Loop through the remaining variables (that aren't var)
+          for (Integer x : this.Variables.keySet()) {
+              // Ensure this is an unassigned variable that's not var
+              if (x != var && (! partialSolution.containsKey(x))) {
+                if (this.Variables.get(x).contains(v))
+                  constraintCount += this.Variables.get(x).size() - 1;
+                else
+                  constraintCount += this.Variables.get(x).size();
+              }
+          }
+          constraintAmount.put(v, constraintCount);
+        }
+
+        // Sort the List appropriately
+        Set<Integer> toList = new HashSet<Integer>(constraintAmount.keySet());
+        for (int i = 0; i < toList.size(); i++) {
+          int leastConstraint = Integer.MAX_VALUE;
+          int leastInt = Integer.MAX_VALUE;
+          // Loop through the constraintAmount keys
+          for (Integer val : constraintAmount.keySet()) {
+            if (constraintAmount.get(val) < leastConstraint) {
+              leastConstraint = constraintAmount.get(val);
+              leastInt = val;
+            }
+          }
+
+          result.add(leastInt);
+          constraintAmount.remove(leastInt);
+        }
+
+        return result;
+
+      } else {
         Set<Integer> vals = Variables.get(var);
         // We want to loop through this and change the values in the Variables object
-        Set<Integer> copy = new HashSet<Integer>(vals);
+        Set<Integer> copy = new HashSet<Integer>(vals); 
         List<Integer> res = new LinkedList<Integer>();
         for (Integer x : copy) {
           res.add(x);
         }
         return res;
+      }
     }
 
     /**
@@ -462,6 +595,7 @@ public class ConstraintSatisfactionProblem {
 
         // Loop through to find the value with the highest number of constraining
         // values
+
         int maxVal = -1;
         Integer maxInt = new Integer(-1);
 
@@ -470,7 +604,7 @@ public class ConstraintSatisfactionProblem {
             maxVal = constraintAmount.get(x);
             maxInt = x;
           }
-        }
+        } 
 
         return maxInt;
 

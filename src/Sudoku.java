@@ -19,8 +19,8 @@ public class Sudoku {
     private ConstraintSatisfactionProblem solver = new ConstraintSatisfactionProblem();
     private int boardSize;
     private int sqrt;
-    private static final String SHORT_TEST = "sudoku_short";
-    private static final String LONG_TEST = "sudoku_test";
+    private static final String SHORT_TEST = "./../sudoku_short";
+    private static final String LONG_TEST = "./../sudoku_test";
     
     // Constructor
     @SuppressWarnings("boxing")
@@ -68,11 +68,14 @@ public class Sudoku {
     @SuppressWarnings({ "restriction", "boxing" })
     public void generateConstraint(int[] pieces) {
         Set<hashPair> constraint = new HashSet<>();
+ //       Set<hashPair> backwards = new HashSet<>();
+
         for (int i = 1; i <= boardSize; ++i) {
             for (int j = 1; j <= boardSize; ++j) {
                 if (i == j)
                     continue;
                 constraint.add(new hashPair(i, j));
+  //              backwards.add(new hashPair(j, i));
             }
         }
         for (int i = 0; i < pieces.length; ++i) {
@@ -80,6 +83,7 @@ public class Sudoku {
                 if (i == j)
                     continue;
                 solver.addConstraint(pieces[i], pieces[j], constraint);
+//                solver.addConstraint(pieces[j], pieces[i], backwards);
             }
         }
     }
@@ -240,7 +244,7 @@ public class Sudoku {
     
     public static final void main(String[] args) {
         //benchmark();
-        Sudoku sudoku = new Sudoku(easyBoard);
+        Sudoku sudoku = new Sudoku(mediumBoard);
         int[][] solution = sudoku.solve();
         if (!sudoku.verify(solution))
             System.out.println("Solution not found");
