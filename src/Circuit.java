@@ -41,7 +41,7 @@ public class Circuit {
         for (int i = 0; i <= this.cols - pieces[p].w; i++)
           for (int j = 0; j <= this.rows - pieces[p].h; j++)
             domain.add((j * this.cols) + i);
-       
+        System.out.println("Piece " + p + " Domain: " + domain);
         solver.addVariable(p, domain);
       }
 
@@ -59,6 +59,7 @@ public class Circuit {
                   constraint.add(new hashPair(val1, val2));
             }
           }
+          System.out.println("(" + p1 + ", " + p2 + "): " + constraint);
           // Add the resulting constraint to the solver
           solver.addConstraint(p1, p2, constraint);
         }

@@ -1,0 +1,12 @@
+To run the code from the command line:
+  To run N-Queens Demo:
+    make runQ
+
+  To run Sudoku Demo:
+    make runS
+
+  To run Circuit Demo:
+    make runC
+
+To change the settings (eg enable different features), modify the constructor
+of the ConstraintSatisfactionProblem class (the boolean values).

@@ -150,7 +150,7 @@ public class Sudoku {
     @SuppressWarnings("boxing")
     public static final void benchmark() {
         Charset charset = Charset.forName("US-ASCII");
-        Path file = FileSystems.getDefault().getPath(".", LONG_TEST);
+        Path file = FileSystems.getDefault().getPath(".", SHORT_TEST);
         List<Integer> nodes = new ArrayList<>();
         List<Integer> constraints = new ArrayList<>();
         List<Double> durations = new ArrayList<>();

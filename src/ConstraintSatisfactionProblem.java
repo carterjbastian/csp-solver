@@ -43,8 +43,8 @@ public class ConstraintSatisfactionProblem {
       /* USE THIS SECTION TO MODIFY ACTIVE FEATURES */
       this.MRV = false;
       this.LCV = false;
-      this.AC3 = false;
-      this.MAC3 = false;
+      this.AC3 = true;
+      this.MAC3 = true;
 
       Variables = new HashMap<Integer, Set<Integer>>();
       Constraints = new HashMap<hashPair, Set<hashPair>>();
